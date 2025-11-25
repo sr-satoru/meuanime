@@ -4473,7 +4473,7 @@ if (!welcomeCookie || welcomeCookie.split('=')[1] !== 'true') {
         skipButton.id = 'firedeluxe-skip-intro';
         skipButton.className = 'vjs-control vjs-button firedeluxe-skip-button';
         skipButton.type = 'button';
-        skipButton.textContent = '⏭ Pular Abertura';
+        skipButton.textContent = '⏭';
         skipButton.title = `Avançar ${SKIP_SECONDS} segundos`;
         skipButton.setAttribute('aria-disabled', 'false');
 
@@ -4517,6 +4517,10 @@ if (!welcomeCookie || welcomeCookie.split('=')[1] !== 'true') {
     }
 
     function skipVideo() {
+        // Previne múltiplas execuções simultâneas
+        if (skipVideo.isExecuting) return;
+        skipVideo.isExecuting = true;
+        
         // Sempre tenta encontrar o vídeo novamente para garantir que está atualizado
         videoElement = findVideoElement();
         
@@ -4527,25 +4531,35 @@ if (!welcomeCookie || welcomeCookie.split('=')[1] !== 'true') {
                 if (videoElement) {
                     performSkip();
                 }
+                skipVideo.isExecuting = false;
             }, 100);
             return;
         }
         
         performSkip();
+        // Libera após um pequeno delay para evitar múltiplas execuções
+        setTimeout(() => {
+            skipVideo.isExecuting = false;
+        }, 500);
     }
     
     function performSkip() {
         if (!videoElement) return;
         
-        if (videoElement.tagName === 'VIDEO') {
-            // Para elementos <video> HTML5
+        // Encontra o vídeo do Video.js se disponível
+        const videoJsPlayer = videoElement.tagName === 'VIDEO' ? videoElement : null;
+        
+        if (videoJsPlayer) {
+            // Para elementos <video> HTML5 (incluindo Video.js)
             try {
-                if (videoElement.currentTime !== undefined && !isNaN(videoElement.currentTime)) {
+                if (videoJsPlayer.currentTime !== undefined && !isNaN(videoJsPlayer.currentTime)) {
+                    const currentTime = videoJsPlayer.currentTime;
                     const newTime = Math.min(
-                        videoElement.currentTime + SKIP_SECONDS,
-                        videoElement.duration || Infinity
+                        currentTime + SKIP_SECONDS,
+                        videoJsPlayer.duration || Infinity
                     );
-                    videoElement.currentTime = newTime;
+                    videoJsPlayer.currentTime = newTime;
+                    return; // Retorna imediatamente após pular
                 }
             } catch (e) {
                 console.log('Erro ao pular vídeo HTML5:', e);
@@ -4571,8 +4585,9 @@ if (!welcomeCookie || welcomeCookie.split('=')[1] !== 'true') {
                     // Tenta encontrar o vídeo dentro do iframe
                     iframeVideo = iframeDoc.querySelector('video');
                     if (iframeVideo && iframeVideo.currentTime !== undefined) {
+                        const currentTime = iframeVideo.currentTime;
                         const newTime = Math.min(
-                            iframeVideo.currentTime + SKIP_SECONDS,
+                            currentTime + SKIP_SECONDS,
                             iframeVideo.duration || Infinity
                         );
                         iframeVideo.currentTime = newTime;
@@ -4591,6 +4606,7 @@ if (!welcomeCookie || welcomeCookie.split('=')[1] !== 'true') {
                             func: 'seekTo',
                             args: [Math.floor(currentTime + SKIP_SECONDS)]
                         }), '*');
+                        return;
                     }
                     // Para Vimeo
                     else if (iframe.src.includes('vimeo.com')) {
@@ -4598,30 +4614,17 @@ if (!welcomeCookie || welcomeCookie.split('=')[1] !== 'true') {
                             method: 'setCurrentTime',
                             value: currentTime + SKIP_SECONDS
                         }, '*');
+                        return;
                     }
                     // Para outros players genéricos
                     else {
-                        // Tenta múltiplas abordagens
                         const seekTime = Math.floor(currentTime + SKIP_SECONDS);
-                        
-                        // Método 1: postMessage genérico
                         iframeWindow.postMessage(JSON.stringify({
                             event: 'command',
                             func: 'seekTo',
                             args: [seekTime]
                         }), '*');
-                        
-                        // Método 2: postMessage alternativo
-                        iframeWindow.postMessage({
-                            method: 'seek',
-                            time: seekTime
-                        }, '*');
-                        
-                        // Método 3: postMessage com currentTime
-                        iframeWindow.postMessage({
-                            action: 'seek',
-                            seconds: SKIP_SECONDS
-                        }, '*');
+                        return;
                     }
                 }
             } catch (e) {
@@ -4629,17 +4632,18 @@ if (!welcomeCookie || welcomeCookie.split('=')[1] !== 'true') {
             }
         }
         
-        // Tenta também encontrar e controlar qualquer vídeo na página
+        // Fallback: tenta encontrar qualquer vídeo na página (apenas se não encontrou antes)
         const allVideos = document.querySelectorAll('video');
         for (const video of allVideos) {
             try {
                 if (video.currentTime !== undefined && !isNaN(video.currentTime)) {
+                    const currentTime = video.currentTime;
                     const newTime = Math.min(
-                        video.currentTime + SKIP_SECONDS,
+                        currentTime + SKIP_SECONDS,
                         video.duration || Infinity
                     );
                     video.currentTime = newTime;
-                    break; // Pula apenas o primeiro vídeo encontrado
+                    return; // Retorna após pular o primeiro vídeo
                 }
             } catch (e) {}
         }
