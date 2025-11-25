@@ -4466,44 +4466,50 @@ if (!welcomeCookie || welcomeCookie.split('=')[1] !== 'true') {
     }
 
     function createSkipButton() {
-        if (skipButton) return;
+        if (skipButton) return skipButton;
 
         const themeColor = getThemeColor();
         skipButton = document.createElement('button');
         skipButton.id = 'firedeluxe-skip-intro';
+        skipButton.className = 'vjs-control vjs-button firedeluxe-skip-button';
+        skipButton.type = 'button';
         skipButton.textContent = '⏭ Pular Abertura';
         skipButton.title = `Avançar ${SKIP_SECONDS} segundos`;
+        skipButton.setAttribute('aria-disabled', 'false');
 
+        // Estilo para integrar com Video.js
         Object.assign(skipButton.style, {
-            position: 'absolute',
-            bottom: '80px',
-            right: '20px',
-            padding: '10px 15px',
             backgroundColor: themeColor,
             color: '#000',
             border: 'none',
-            borderRadius: '6px',
+            borderRadius: '4px',
             cursor: 'pointer',
-            fontSize: '14px',
+            fontSize: '12px',
             fontWeight: 'bold',
-            zIndex: '10000',
-            boxShadow: '0 2px 10px rgba(0,0,0,0.5)',
-            transition: 'all 0.3s ease',
-            fontFamily: 'Arial, sans-serif'
+            padding: '8px 12px',
+            margin: '0 5px',
+            transition: 'all 0.2s ease',
+            fontFamily: 'Arial, sans-serif',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minWidth: 'auto',
+            height: 'auto'
         });
 
         skipButton.addEventListener('mouseenter', () => {
+            skipButton.style.opacity = '0.9';
             skipButton.style.transform = 'scale(1.05)';
-            skipButton.style.boxShadow = `0 4px 15px ${themeColor}80`;
         });
 
         skipButton.addEventListener('mouseleave', () => {
+            skipButton.style.opacity = '1';
             skipButton.style.transform = 'scale(1)';
-            skipButton.style.boxShadow = '0 2px 10px rgba(0,0,0,0.5)';
         });
 
         skipButton.addEventListener('click', (e) => {
             e.stopPropagation();
+            e.preventDefault();
             skipVideo();
         });
 
@@ -4653,58 +4659,30 @@ if (!welcomeCookie || welcomeCookie.split('=')[1] !== 'true') {
             return;
         }
 
-        // Procura pelo container do player
-        const playerContainers = [
-            document.querySelector('.video-container'),
-            document.querySelector('#player'),
-            document.querySelector('.player-container'),
-            document.querySelector('div[class*="player"]'),
-            document.querySelector('div[class*="video"]'),
-            document.querySelector('div[class*="Player"]'),
-            document.querySelector('div[class*="Video"]'),
-            document.querySelector('.plyr'),
-            document.querySelector('.jwplayer'),
-            document.querySelector('main'),
-            document.querySelector('article')
-        ];
-
-        let container = null;
-        for (const c of playerContainers) {
-            if (c) {
-                container = c;
-                break;
-            }
-        }
-
-        // Se não encontrou container específico, tenta encontrar pelo vídeo
-        if (!container) {
-            const video = findVideoElement();
-            if (video && video.parentElement) {
-                container = video.parentElement;
-            }
-        }
-
-        // Se ainda não encontrou, usa o body
-        if (!container) {
-            container = document.body;
+        // Procura especificamente pela barra de controles do Video.js
+        const controlBar = document.querySelector('.vjs-control-bar');
+        
+        if (!controlBar) {
+            // Se não encontrou, tenta novamente após um delay
+            setTimeout(addSkipButton, 500);
+            setTimeout(addSkipButton, 1500);
+            setTimeout(addSkipButton, 3000);
+            return;
         }
 
         // Tenta encontrar o vídeo
         videoElement = findVideoElement();
         
-        // Cria o botão mesmo se não encontrou o vídeo ainda (ele será encontrado quando clicar)
+        // Cria o botão
         const btn = createSkipButton();
-        if (container) {
-            // Garante que o container tenha position relative ou fixed para o botão absolute funcionar
-            const containerStyle = window.getComputedStyle(container);
-            if (containerStyle.position === 'static') {
-                container.style.position = 'relative';
-            }
-            container.appendChild(btn);
+        
+        // Adiciona o botão na barra de controles, antes do botão de fullscreen
+        const fullscreenBtn = controlBar.querySelector('.vjs-fullscreen-control');
+        if (fullscreenBtn) {
+            controlBar.insertBefore(btn, fullscreenBtn);
         } else {
-            // Fallback: adiciona ao body com position fixed
-            btn.style.position = 'fixed';
-            document.body.appendChild(btn);
+            // Se não encontrou o botão de fullscreen, adiciona no final
+            controlBar.appendChild(btn);
         }
         
         // Se não encontrou o vídeo, tenta novamente após delays
