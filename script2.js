@@ -4426,17 +4426,42 @@ if (!welcomeCookie || welcomeCookie.split('=')[1] !== 'true') {
             'video',
             'iframe[src*="player"]',
             'iframe[src*="video"]',
+            'iframe[src*="embed"]',
+            'iframe[src*="youtube"]',
+            'iframe[src*="vimeo"]',
             '.video-player video',
             '#player video',
-            'div[class*="player"] video'
+            'div[class*="player"] video',
+            'div[class*="video"] video',
+            '.plyr__video-wrapper video',
+            '.jwplayer video',
+            'video[src]',
+            'video source'
         ];
 
         for (const selector of selectors) {
-            const element = document.querySelector(selector);
-            if (element) {
-                return element;
+            const elements = document.querySelectorAll(selector);
+            for (const element of elements) {
+                if (element.tagName === 'VIDEO' || element.tagName === 'IFRAME') {
+                    return element;
+                }
             }
         }
+        
+        // Tenta encontrar qualquer vídeo no documento
+        const allVideos = document.querySelectorAll('video');
+        if (allVideos.length > 0) {
+            return allVideos[0];
+        }
+        
+        // Tenta encontrar qualquer iframe
+        const allIframes = document.querySelectorAll('iframe');
+        for (const iframe of allIframes) {
+            if (iframe.src && (iframe.src.includes('player') || iframe.src.includes('video') || iframe.src.includes('embed'))) {
+                return iframe;
+            }
+        }
+        
         return null;
     }
 
@@ -4486,56 +4511,145 @@ if (!welcomeCookie || welcomeCookie.split('=')[1] !== 'true') {
     }
 
     function skipVideo() {
+        // Sempre tenta encontrar o vídeo novamente para garantir que está atualizado
+        videoElement = findVideoElement();
+        
         if (!videoElement) {
-            videoElement = findVideoElement();
+            // Tenta encontrar novamente após um pequeno delay
+            setTimeout(() => {
+                videoElement = findVideoElement();
+                if (videoElement) {
+                    performSkip();
+                }
+            }, 100);
+            return;
         }
-
-        if (videoElement) {
-            if (videoElement.tagName === 'VIDEO') {
-                // Para elementos <video> HTML5
-                if (videoElement.currentTime !== undefined) {
-                    videoElement.currentTime = Math.min(
+        
+        performSkip();
+    }
+    
+    function performSkip() {
+        if (!videoElement) return;
+        
+        if (videoElement.tagName === 'VIDEO') {
+            // Para elementos <video> HTML5
+            try {
+                if (videoElement.currentTime !== undefined && !isNaN(videoElement.currentTime)) {
+                    const newTime = Math.min(
                         videoElement.currentTime + SKIP_SECONDS,
                         videoElement.duration || Infinity
                     );
+                    videoElement.currentTime = newTime;
                 }
-            } else if (videoElement.tagName === 'IFRAME') {
-                // Para iframes (YouTube, Vimeo, etc.)
-                try {
-                    const iframe = videoElement;
-                    const iframeWindow = iframe.contentWindow;
-                    
-                    // Tenta encontrar o player dentro do iframe
-                    if (iframeWindow) {
-                        // Para players comuns
-                        const iframeDoc = iframe.contentDocument || iframeWindow.document;
-                        const iframeVideo = iframeDoc?.querySelector('video');
-                        
-                        if (iframeVideo) {
-                            iframeVideo.currentTime = Math.min(
-                                iframeVideo.currentTime + SKIP_SECONDS,
-                                iframeVideo.duration || Infinity
-                            );
-                        } else {
-                            // Tenta usar postMessage para controlar o player
-                            iframeWindow.postMessage(JSON.stringify({
-                                event: 'command',
-                                func: 'seekTo',
-                                args: [Math.floor((iframeVideo?.currentTime || 0) + SKIP_SECONDS)]
-                            }), '*');
-                        }
-                    }
-                } catch (e) {
-                    console.log('Não foi possível controlar o iframe:', e);
-                }
+            } catch (e) {
+                console.log('Erro ao pular vídeo HTML5:', e);
             }
+        } else if (videoElement.tagName === 'IFRAME') {
+            // Para iframes (YouTube, Vimeo, players externos, etc.)
+            try {
+                const iframe = videoElement;
+                
+                // Tenta acessar o conteúdo do iframe
+                let iframeDoc = null;
+                let iframeWindow = null;
+                
+                try {
+                    iframeWindow = iframe.contentWindow;
+                    iframeDoc = iframe.contentDocument || (iframeWindow ? iframeWindow.document : null);
+                } catch (e) {
+                    // Cross-origin, tenta postMessage
+                }
+                
+                let iframeVideo = null;
+                if (iframeDoc) {
+                    // Tenta encontrar o vídeo dentro do iframe
+                    iframeVideo = iframeDoc.querySelector('video');
+                    if (iframeVideo && iframeVideo.currentTime !== undefined) {
+                        const newTime = Math.min(
+                            iframeVideo.currentTime + SKIP_SECONDS,
+                            iframeVideo.duration || Infinity
+                        );
+                        iframeVideo.currentTime = newTime;
+                        return;
+                    }
+                }
+                
+                // Tenta usar postMessage para controlar o player (YouTube, Vimeo, etc.)
+                if (iframeWindow) {
+                    const currentTime = iframeVideo?.currentTime || 0;
+                    
+                    // Para YouTube
+                    if (iframe.src.includes('youtube.com') || iframe.src.includes('youtu.be')) {
+                        iframeWindow.postMessage(JSON.stringify({
+                            event: 'command',
+                            func: 'seekTo',
+                            args: [Math.floor(currentTime + SKIP_SECONDS)]
+                        }), '*');
+                    }
+                    // Para Vimeo
+                    else if (iframe.src.includes('vimeo.com')) {
+                        iframeWindow.postMessage({
+                            method: 'setCurrentTime',
+                            value: currentTime + SKIP_SECONDS
+                        }, '*');
+                    }
+                    // Para outros players genéricos
+                    else {
+                        // Tenta múltiplas abordagens
+                        const seekTime = Math.floor(currentTime + SKIP_SECONDS);
+                        
+                        // Método 1: postMessage genérico
+                        iframeWindow.postMessage(JSON.stringify({
+                            event: 'command',
+                            func: 'seekTo',
+                            args: [seekTime]
+                        }), '*');
+                        
+                        // Método 2: postMessage alternativo
+                        iframeWindow.postMessage({
+                            method: 'seek',
+                            time: seekTime
+                        }, '*');
+                        
+                        // Método 3: postMessage com currentTime
+                        iframeWindow.postMessage({
+                            action: 'seek',
+                            seconds: SKIP_SECONDS
+                        }, '*');
+                    }
+                }
+            } catch (e) {
+                console.log('Erro ao pular vídeo em iframe:', e);
+            }
+        }
+        
+        // Tenta também encontrar e controlar qualquer vídeo na página
+        const allVideos = document.querySelectorAll('video');
+        for (const video of allVideos) {
+            try {
+                if (video.currentTime !== undefined && !isNaN(video.currentTime)) {
+                    const newTime = Math.min(
+                        video.currentTime + SKIP_SECONDS,
+                        video.duration || Infinity
+                    );
+                    video.currentTime = newTime;
+                    break; // Pula apenas o primeiro vídeo encontrado
+                }
+            } catch (e) {}
         }
     }
 
     function addSkipButton() {
         // Verifica se está em uma página de episódio
-        if (!window.location.href.includes('/animes/') || 
-            window.location.href.includes('/todos-os-episodios')) {
+        const href = window.location.href;
+        if (!href.includes('/animes/') || 
+            href.includes('/todos-os-episodios') ||
+            href.includes('/dublado-todos-os-episodios')) {
+            return;
+        }
+
+        // Verifica se o botão já existe
+        if (document.getElementById('firedeluxe-skip-intro')) {
             return;
         }
 
@@ -4545,7 +4659,13 @@ if (!welcomeCookie || welcomeCookie.split('=')[1] !== 'true') {
             document.querySelector('#player'),
             document.querySelector('.player-container'),
             document.querySelector('div[class*="player"]'),
-            document.querySelector('div[class*="video"]')
+            document.querySelector('div[class*="video"]'),
+            document.querySelector('div[class*="Player"]'),
+            document.querySelector('div[class*="Video"]'),
+            document.querySelector('.plyr'),
+            document.querySelector('.jwplayer'),
+            document.querySelector('main'),
+            document.querySelector('article')
         ];
 
         let container = null;
@@ -4556,46 +4676,66 @@ if (!welcomeCookie || welcomeCookie.split('=')[1] !== 'true') {
             }
         }
 
-        // Se não encontrou container específico, usa o body
+        // Se não encontrou container específico, tenta encontrar pelo vídeo
         if (!container) {
-            container = document.body;
+            const video = findVideoElement();
+            if (video && video.parentElement) {
+                container = video.parentElement;
+            }
         }
 
-        // Verifica se o botão já existe
-        if (document.getElementById('firedeluxe-skip-intro')) {
-            return;
+        // Se ainda não encontrou, usa o body
+        if (!container) {
+            container = document.body;
         }
 
         // Tenta encontrar o vídeo
         videoElement = findVideoElement();
         
-        if (!videoElement) {
-            // Se não encontrou, tenta novamente após um delay
-            setTimeout(() => {
-                videoElement = findVideoElement();
-                if (videoElement) {
-                    const btn = createSkipButton();
-                    if (container) {
-                        container.style.position = 'relative';
-                        container.appendChild(btn);
-                    }
-                }
-            }, 2000);
-            return;
-        }
-
+        // Cria o botão mesmo se não encontrou o vídeo ainda (ele será encontrado quando clicar)
         const btn = createSkipButton();
         if (container) {
-            container.style.position = 'relative';
+            // Garante que o container tenha position relative ou fixed para o botão absolute funcionar
+            const containerStyle = window.getComputedStyle(container);
+            if (containerStyle.position === 'static') {
+                container.style.position = 'relative';
+            }
             container.appendChild(btn);
+        } else {
+            // Fallback: adiciona ao body com position fixed
+            btn.style.position = 'fixed';
+            document.body.appendChild(btn);
+        }
+        
+        // Se não encontrou o vídeo, tenta novamente após delays
+        if (!videoElement) {
+            setTimeout(() => {
+                videoElement = findVideoElement();
+            }, 1000);
+            setTimeout(() => {
+                videoElement = findVideoElement();
+            }, 3000);
+            setTimeout(() => {
+                videoElement = findVideoElement();
+            }, 5000);
         }
     }
 
     // Observa mudanças no DOM para adicionar o botão quando o player carregar
+    let observerTimeout = null;
     const observer = new MutationObserver(() => {
-        if (!document.getElementById('firedeluxe-skip-intro')) {
-            addSkipButton();
+        // Debounce para evitar muitas execuções
+        if (observerTimeout) {
+            clearTimeout(observerTimeout);
         }
+        observerTimeout = setTimeout(() => {
+            if (!document.getElementById('firedeluxe-skip-intro')) {
+                addSkipButton();
+            } else {
+                // Atualiza a referência do vídeo mesmo se o botão já existe
+                videoElement = findVideoElement();
+            }
+        }, 500);
     });
 
     observer.observe(document.body, {
@@ -4605,12 +4745,28 @@ if (!welcomeCookie || welcomeCookie.split('=')[1] !== 'true') {
 
     // Tenta adicionar imediatamente
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', addSkipButton);
+        document.addEventListener('DOMContentLoaded', () => {
+            addSkipButton();
+            setTimeout(addSkipButton, 1000);
+            setTimeout(addSkipButton, 3000);
+        });
     } else {
         addSkipButton();
-        // Tenta novamente após um tempo para garantir que o player carregou
+        // Tenta novamente após tempos diferentes para garantir que o player carregou
         setTimeout(addSkipButton, 1000);
         setTimeout(addSkipButton, 3000);
+        setTimeout(addSkipButton, 5000);
     }
+    
+    // Também observa mudanças na URL (SPA)
+    let lastUrl = location.href;
+    setInterval(() => {
+        const currentUrl = location.href;
+        if (currentUrl !== lastUrl) {
+            lastUrl = currentUrl;
+            videoElement = null; // Reseta a referência do vídeo
+            setTimeout(addSkipButton, 500);
+        }
+    }, 1000);
 
 })();
