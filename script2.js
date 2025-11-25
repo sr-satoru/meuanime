@@ -4402,3 +4402,215 @@ if (!welcomeCookie || welcomeCookie.split('=')[1] !== 'true') {
 }
     
 })();
+
+//Botão para pular abertura do anime (avança 91 segundos)
+(function() {
+    'use strict';
+
+    const SKIP_SECONDS = 91;
+    let skipButton = null;
+    let videoElement = null;
+
+    function getThemeColor() {
+        try {
+            const config = JSON.parse(localStorage.getItem('firedeluxe_configuracoes') || '{}');
+            return config.themeColor || '#FFA500';
+        } catch {
+            return '#FFA500';
+        }
+    }
+
+    function findVideoElement() {
+        // Tenta encontrar diferentes tipos de players de vídeo
+        const selectors = [
+            'video',
+            'iframe[src*="player"]',
+            'iframe[src*="video"]',
+            '.video-player video',
+            '#player video',
+            'div[class*="player"] video'
+        ];
+
+        for (const selector of selectors) {
+            const element = document.querySelector(selector);
+            if (element) {
+                return element;
+            }
+        }
+        return null;
+    }
+
+    function createSkipButton() {
+        if (skipButton) return;
+
+        const themeColor = getThemeColor();
+        skipButton = document.createElement('button');
+        skipButton.id = 'firedeluxe-skip-intro';
+        skipButton.textContent = '⏭ Pular Abertura';
+        skipButton.title = `Avançar ${SKIP_SECONDS} segundos`;
+
+        Object.assign(skipButton.style, {
+            position: 'absolute',
+            bottom: '80px',
+            right: '20px',
+            padding: '10px 15px',
+            backgroundColor: themeColor,
+            color: '#000',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: 'bold',
+            zIndex: '10000',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.5)',
+            transition: 'all 0.3s ease',
+            fontFamily: 'Arial, sans-serif'
+        });
+
+        skipButton.addEventListener('mouseenter', () => {
+            skipButton.style.transform = 'scale(1.05)';
+            skipButton.style.boxShadow = `0 4px 15px ${themeColor}80`;
+        });
+
+        skipButton.addEventListener('mouseleave', () => {
+            skipButton.style.transform = 'scale(1)';
+            skipButton.style.boxShadow = '0 2px 10px rgba(0,0,0,0.5)';
+        });
+
+        skipButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            skipVideo();
+        });
+
+        return skipButton;
+    }
+
+    function skipVideo() {
+        if (!videoElement) {
+            videoElement = findVideoElement();
+        }
+
+        if (videoElement) {
+            if (videoElement.tagName === 'VIDEO') {
+                // Para elementos <video> HTML5
+                if (videoElement.currentTime !== undefined) {
+                    videoElement.currentTime = Math.min(
+                        videoElement.currentTime + SKIP_SECONDS,
+                        videoElement.duration || Infinity
+                    );
+                }
+            } else if (videoElement.tagName === 'IFRAME') {
+                // Para iframes (YouTube, Vimeo, etc.)
+                try {
+                    const iframe = videoElement;
+                    const iframeWindow = iframe.contentWindow;
+                    
+                    // Tenta encontrar o player dentro do iframe
+                    if (iframeWindow) {
+                        // Para players comuns
+                        const iframeDoc = iframe.contentDocument || iframeWindow.document;
+                        const iframeVideo = iframeDoc?.querySelector('video');
+                        
+                        if (iframeVideo) {
+                            iframeVideo.currentTime = Math.min(
+                                iframeVideo.currentTime + SKIP_SECONDS,
+                                iframeVideo.duration || Infinity
+                            );
+                        } else {
+                            // Tenta usar postMessage para controlar o player
+                            iframeWindow.postMessage(JSON.stringify({
+                                event: 'command',
+                                func: 'seekTo',
+                                args: [Math.floor((iframeVideo?.currentTime || 0) + SKIP_SECONDS)]
+                            }), '*');
+                        }
+                    }
+                } catch (e) {
+                    console.log('Não foi possível controlar o iframe:', e);
+                }
+            }
+        }
+    }
+
+    function addSkipButton() {
+        // Verifica se está em uma página de episódio
+        if (!window.location.href.includes('/animes/') || 
+            window.location.href.includes('/todos-os-episodios')) {
+            return;
+        }
+
+        // Procura pelo container do player
+        const playerContainers = [
+            document.querySelector('.video-container'),
+            document.querySelector('#player'),
+            document.querySelector('.player-container'),
+            document.querySelector('div[class*="player"]'),
+            document.querySelector('div[class*="video"]')
+        ];
+
+        let container = null;
+        for (const c of playerContainers) {
+            if (c) {
+                container = c;
+                break;
+            }
+        }
+
+        // Se não encontrou container específico, usa o body
+        if (!container) {
+            container = document.body;
+        }
+
+        // Verifica se o botão já existe
+        if (document.getElementById('firedeluxe-skip-intro')) {
+            return;
+        }
+
+        // Tenta encontrar o vídeo
+        videoElement = findVideoElement();
+        
+        if (!videoElement) {
+            // Se não encontrou, tenta novamente após um delay
+            setTimeout(() => {
+                videoElement = findVideoElement();
+                if (videoElement) {
+                    const btn = createSkipButton();
+                    if (container) {
+                        container.style.position = 'relative';
+                        container.appendChild(btn);
+                    }
+                }
+            }, 2000);
+            return;
+        }
+
+        const btn = createSkipButton();
+        if (container) {
+            container.style.position = 'relative';
+            container.appendChild(btn);
+        }
+    }
+
+    // Observa mudanças no DOM para adicionar o botão quando o player carregar
+    const observer = new MutationObserver(() => {
+        if (!document.getElementById('firedeluxe-skip-intro')) {
+            addSkipButton();
+        }
+    });
+
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+
+    // Tenta adicionar imediatamente
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', addSkipButton);
+    } else {
+        addSkipButton();
+        // Tenta novamente após um tempo para garantir que o player carregou
+        setTimeout(addSkipButton, 1000);
+        setTimeout(addSkipButton, 3000);
+    }
+
+})();
