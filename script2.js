@@ -4488,9 +4488,9 @@ if (!welcomeCookie || welcomeCookie.split('=')[1] !== 'true') {
         // Estilo para integrar com Video.js
         Object.assign(skipButton.style, {
             backgroundColor: 'transparent',
-            color: '#fff',
+            color: themeColor,
             border: 'none',
-            borderRadius: '0',
+            borderRadius: '4px',
             cursor: 'pointer',
             fontSize: '12px',
             fontWeight: 'bold',
@@ -4502,12 +4502,7 @@ if (!welcomeCookie || welcomeCookie.split('=')[1] !== 'true') {
             alignItems: 'center',
             justifyContent: 'center',
             minWidth: 'auto',
-            height: 'auto',
-            boxShadow: 'none',
-            outline: 'none',
-            verticalAlign: 'middle',
-            lineHeight: '1',
-            alignSelf: 'center'
+            height: 'auto'
         });
 
         skipButton.addEventListener('mouseenter', () => {
@@ -9254,24 +9249,21 @@ if (!welcomeCookie || welcomeCookie.split('=')[1] !== 'true') {
         // Estilo para integrar com Video.js
         Object.assign(skipButton.style, {
             backgroundColor: 'transparent',
-            color: '#fff',
+            color: themeColor,
             border: 'none',
-            borderRadius: '0',
+            borderRadius: '4px',
             cursor: 'pointer',
-            fontSize: '20px',
-            fontWeight: 'normal',
-            padding: '0',
-            margin: '0',
+            fontSize: '12px',
+            fontWeight: 'bold',
+            padding: '8px 12px',
+            margin: '0 5px',
             transition: 'all 0.2s ease',
             fontFamily: 'Arial, sans-serif',
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
             minWidth: 'auto',
-            height: 'auto',
-            width: 'auto',
-            boxShadow: 'none',
-            outline: 'none'
+            height: 'auto'
         });
 
         skipButton.addEventListener('mouseenter', () => {
