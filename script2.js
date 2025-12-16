@@ -4504,7 +4504,10 @@ if (!welcomeCookie || welcomeCookie.split('=')[1] !== 'true') {
             minWidth: 'auto',
             height: 'auto',
             boxShadow: 'none',
-            outline: 'none'
+            outline: 'none',
+            verticalAlign: 'middle',
+            lineHeight: '1',
+            alignSelf: 'center'
         });
 
         skipButton.addEventListener('mouseenter', () => {
