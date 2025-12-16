@@ -4493,9 +4493,9 @@ if (!welcomeCookie || welcomeCookie.split('=')[1] !== 'true') {
             borderRadius: '0',
             cursor: 'pointer',
             fontSize: '12px',
-            fontWeight: 'normal',
-            padding: '0',
-            margin: '0',
+            fontWeight: 'bold',
+            padding: '8px 12px',
+            margin: '0 5px',
             transition: 'all 0.2s ease',
             fontFamily: 'Arial, sans-serif',
             display: 'inline-flex',
@@ -4503,7 +4503,6 @@ if (!welcomeCookie || welcomeCookie.split('=')[1] !== 'true') {
             justifyContent: 'center',
             minWidth: 'auto',
             height: 'auto',
-            width: 'auto',
             boxShadow: 'none',
             outline: 'none'
         });
