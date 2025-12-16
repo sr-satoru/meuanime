@@ -4488,7 +4488,7 @@ if (!welcomeCookie || welcomeCookie.split('=')[1] !== 'true') {
         // Estilo para integrar com Video.js
         Object.assign(skipButton.style, {
             backgroundColor: 'transparent',
-            color: themeColor,
+            color: '#FFFFFF',
             border: 'none',
             borderRadius: '4px',
             cursor: 'pointer',
@@ -9249,7 +9249,7 @@ if (!welcomeCookie || welcomeCookie.split('=')[1] !== 'true') {
         // Estilo para integrar com Video.js
         Object.assign(skipButton.style, {
             backgroundColor: 'transparent',
-            color: themeColor,
+            color: '#FFFFFF',
             border: 'none',
             borderRadius: '4px',
             cursor: 'pointer',
