@@ -4411,11 +4411,11 @@ if (!welcomeCookie || welcomeCookie.split('=')[1] !== 'true') {
     
 })();
 
-//Botão para pular abertura do anime (avança 91 segundos)
+//Botão para pular abertura do anime (avança 85 segundos)
 (function() {
     'use strict';
 
-    const SKIP_SECONDS = 91;
+    const SKIP_SECONDS = 85;
     let skipButton = null;
     let videoElement = null;
 
@@ -4487,22 +4487,25 @@ if (!welcomeCookie || welcomeCookie.split('=')[1] !== 'true') {
 
         // Estilo para integrar com Video.js
         Object.assign(skipButton.style, {
-            backgroundColor: themeColor,
-            color: '#000',
+            backgroundColor: 'transparent',
+            color: '#fff',
             border: 'none',
-            borderRadius: '4px',
+            borderRadius: '0',
             cursor: 'pointer',
             fontSize: '12px',
-            fontWeight: 'bold',
-            padding: '8px 12px',
-            margin: '0 5px',
+            fontWeight: 'normal',
+            padding: '0',
+            margin: '0',
             transition: 'all 0.2s ease',
             fontFamily: 'Arial, sans-serif',
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
             minWidth: 'auto',
-            height: 'auto'
+            height: 'auto',
+            width: 'auto',
+            boxShadow: 'none',
+            outline: 'none'
         });
 
         skipButton.addEventListener('mouseenter', () => {
@@ -9172,11 +9175,11 @@ if (!welcomeCookie || welcomeCookie.split('=')[1] !== 'true') {
     
 })();
 
-//Botão para pular abertura do anime (avança 91 segundos)
+//Botão para pular abertura do anime (avança 85 segundos)
 (function() {
     'use strict';
 
-    const SKIP_SECONDS = 91;
+    const SKIP_SECONDS = 85;
     let skipButton = null;
     let videoElement = null;
 
@@ -9248,22 +9251,25 @@ if (!welcomeCookie || welcomeCookie.split('=')[1] !== 'true') {
 
         // Estilo para integrar com Video.js
         Object.assign(skipButton.style, {
-            backgroundColor: themeColor,
-            color: '#000',
+            backgroundColor: 'transparent',
+            color: '#fff',
             border: 'none',
-            borderRadius: '4px',
+            borderRadius: '0',
             cursor: 'pointer',
-            fontSize: '12px',
-            fontWeight: 'bold',
-            padding: '8px 12px',
-            margin: '0 5px',
+            fontSize: '20px',
+            fontWeight: 'normal',
+            padding: '0',
+            margin: '0',
             transition: 'all 0.2s ease',
             fontFamily: 'Arial, sans-serif',
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
             minWidth: 'auto',
-            height: 'auto'
+            height: 'auto',
+            width: 'auto',
+            boxShadow: 'none',
+            outline: 'none'
         });
 
         skipButton.addEventListener('mouseenter', () => {
