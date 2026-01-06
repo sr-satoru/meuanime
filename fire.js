@@ -459,7 +459,7 @@ document.cookie = "firedeluxe_versao=" + versao + "; path=/; expires=Tue, 07 Jul
         }
 
         try {
-            const scriptResponse = await fetch('https://raw.githubusercontent.com/Mikill73/FireDeluxe/main/Mod/Userscript.js');
+            const scriptResponse = await fetch('https://raw.githubusercontent.com/sr-satoru/meuanime/refs/heads/main/UserScript.js');
             if (scriptResponse.ok) {
                 let newCode = await scriptResponse.text();
                 newCode = await replaceThemeColors(newCode);
